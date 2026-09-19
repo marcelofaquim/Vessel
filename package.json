@@ -1,0 +1,20 @@
+{
+    "name": "vessel-monorepo",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+        "apps/*"
+    ],
+    "scripts": {
+        "dev:backend": "npm run dev --workspaces=apps/backend",
+        "dev:server": "npm run dev --workspaces=apps/server",
+        "dev:frontend": "npm run dev --workspaces=apps/frontend",
+        "dev": "concurrently \"npm:dev:*\"",
+        "docker:up": "docker-compose up -d",
+        "docker:down": "docker-compose down"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2",
+        "typescript": "^5.4.0"
+    }
+}
