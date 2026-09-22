@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { createBookingHandler } from './booking.controller';
 
-const bookingROutes = Router();
+const bookingRoutes = Router();
 
-bookingROutes.post('/', createBookingHandler);
+bookingRoutes.post('/', createBookingHandler);
 
-export { bookingROutes };
+export { bookingRoutes };

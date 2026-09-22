@@ -1,0 +1,48 @@
+### 1. Testar Saúde da API
+GET http://localhost:3333/health
+
+###
+
+### 2. Criar Usuário
+# @name createUser
+POST http://localhost:3333/users
+Content-Type: application/json
+
+{
+  "name": "Maria Silva",
+  "email": "maria@vessel.com",
+  "role": "GUEST"
+}
+
+###
+
+### 3. Listar Usuários
+GET http://localhost:3333/users
+
+###
+
+### 4. Criar Propriedade
+POST http://localhost:3333/properties
+Content-Type: application/json
+
+{
+  "title": "Apartamento na Praia",
+  "description": "Vista para o mar com 2 quartos",
+  "pricePerNight": 250,
+  "location": "Rio de Janeiro",
+  "maxGuests": 4,
+  "hostId": "d569e2fb-1b13-4dcb-bc95-4a5f7dca1640"
+}
+
+###
+
+### 5. Criar Reserva (com Redlock)
+POST http://localhost:3333/bookings
+Content-Type: application/json
+
+{
+  "userId": "d569e2fb-1b13-4dcb-bc95-4a5f7dca1640",
+  "propertyId": "d0b2adb1-ecb3-478c-859f-8693643b2f39",
+  "startDate": "2026-10-01T00:00:00.000Z",
+  "endDate": "2026-10-05T00:00:00.000Z"
+}

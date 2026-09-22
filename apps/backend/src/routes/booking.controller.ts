@@ -1,21 +1,45 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
-import { redlock } from '../../lib/redis';
+import { redis } from '../../lib/redis';
 
 export async function createBookingHandler(req: Request, res: Response) {
-  const { propertyId, guestId, checkIn, checkOut, totalPrice } = req.body;
+  const { userId, propertyId, checkIn, checkOut, startDate, endDate } = req.body;
 
-  // Recurso de bloqueio do Redlock baseado na propriedade
-  const lockResource = `locks:property:${propertyId}`;
-  const ttl = 5000; // Tempo de vida do lock em ms (5s)
+  // Aceita checkIn/checkOut ou startDate/endDate
+  const rawCheckIn = checkIn || startDate;
+  const rawCheckOut = checkOut || endDate;
 
-  let lock;
+  if (!userId || !propertyId || !rawCheckIn || !rawCheckOut) {
+    return res.status(400).json({ error: 'Usuário, propriedade, check-in e check-out são obrigatórios.' });
+  }
+
+  const checkInDate = new Date(rawCheckIn);
+  const checkOutDate = new Date(rawCheckOut);
+
+  // Valida se as datas são válidas
+  if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
+    return res.status(400).json({ error: 'Formato de data inválido.' });
+  }
+
+  // Chave de bloqueio temporário na propriedade
+  const lockKey = `locks:property:${propertyId}`;
+  const ttlInSeconds = 5;
+
+  let acquiredLock = false;
 
   try {
-    // 1. Tenta adquirir o bloqueio distribuído
-    lock = await redlock.acquire([lockResource], ttl);
+    // NX = Set if Not eXists (só define a chave se ela não existir)
+    // EX = Expire time em segundos
+    const lockResult = await redis.set(lockKey, 'locked', 'EX', ttlInSeconds, 'NX');
 
-    // 2. Verifica se a propriedade existe
+    if (!lockResult) {
+      return res.status(409).json({
+        error: 'Outra transação está a processar uma reserva para esta propriedade. Tente novamente.',
+      });
+    }
+
+    acquiredLock = true;
+
     const property = await prisma.property.findUnique({
       where: { id: propertyId },
     });
@@ -24,14 +48,13 @@ export async function createBookingHandler(req: Request, res: Response) {
       return res.status(404).json({ error: 'Propriedade não encontrada.' });
     }
 
-    // 3. Checa conflito de datas na base de dados
-    const checkInDate = new Date(checkIn);
-    const checkOutDate = new Date(checkOut);
-
+    // Verifica sobreposição de datas
     const existingBooking = await prisma.booking.findFirst({
       where: {
         propertyId,
-        status: { in: ['PENDING', 'CONFIRMED'] },
+        status: {
+          in: ['PENDING', 'CONFIRMED'],
+        },
         OR: [
           {
             checkIn: { lte: checkOutDate },
@@ -42,37 +65,33 @@ export async function createBookingHandler(req: Request, res: Response) {
     });
 
     if (existingBooking) {
-      return res.status(409).json({
-        error: 'A propriedade já possui uma reserva confirmada ou pendente para este período.',
-      });
+      return res.status(409).json({ error: 'Propriedade indisponível para estas datas.' });
     }
 
-    // 4. Cria a reserva
+    // Cálculo do valor total
+    const diffTime = Math.abs(checkOutDate.getTime() - checkInDate.getTime());
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+    const totalPrice = nights * Number(property.pricePerNight);
+
+    // Criação da reserva passando diretamente os IDs (userId, propertyId)
     const booking = await prisma.booking.create({
       data: {
-        propertyId,
-        guestId,
         checkIn: checkInDate,
         checkOut: checkOutDate,
         totalPrice,
-        status: 'PENDING',
+        status: 'CONFIRMED',
+        guestId: userId, // mapeia o userId recebido na requisição para a coluna
+        propertyId,
       },
     });
 
     return res.status(201).json(booking);
   } catch (error: any) {
-    if (error.name === 'ExecutionError') {
-      return res.status(429).json({
-        error: 'Alta demanda para esta propriedade. Tente novamente em instantes.',
-      });
-    }
-
     console.error('Erro ao processar reserva:', error);
     return res.status(500).json({ error: 'Erro interno ao criar reserva.' });
   } finally {
-    // 5. Liberta o bloqueio se tiver sido adquirido
-    if (lock) {
-      await lock.release().catch(() => {});
+    if (acquiredLock) {
+      await redis.del(lockKey).catch(() => {});
     }
   }
 }
