@@ -95,3 +95,64 @@ export async function createBookingHandler(req: Request, res: Response) {
     }
   }
 }
+  export async function getUserBookingsHandler(req: Request, res: Response) {
+    const { userId } = req.params;
+
+    try {
+      const bookings = await prisma.booking.findMany({
+        where: {
+          guestId: userId,
+        },
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              location: true,
+              pricePerNight: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return res.status(200).json(bookings);
+    } catch (error) {
+      console.error('Erro ao buscar reservas do usuário:', error);
+      return res.status(500).json({ error: 'Erro interno ao buscar reserva do usuário.' });
+    }
+    
+  }
+
+  export async function cancelBookingHandler(req: Request, res: Response) {
+    const { id } = req.params;
+
+    try {
+      const booking = await prisma.booking.findUnique({
+        where: { id },
+      });
+
+      if (!booking) {
+        return res.status(404).json({ error: 'Reserva não encontrada.' });
+      }
+
+      if (booking.status === 'CANCELLED') {
+        return res.status(400).json({ error: 'Reserva já esta cancelada.'})
+      }
+
+      const updateBooking = await prisma.booking.update({
+        where: { id },
+        data: {
+          status: 'CANCELLED',
+        },
+      });
+
+      return res.status(200).json(updateBooking);
+    } catch (error) {
+      console.error('Erro ao cancelar a reserva', error);
+      return res.status(500).json({ error: 'Erro interno ao cancelar a reserva.' });
+    }
+    
+  }

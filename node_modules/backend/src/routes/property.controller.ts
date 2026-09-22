@@ -37,4 +37,50 @@ export async function getPropertiesHandler(req: Request, res: Response) {
     console.error('Erro ao buscar propriedades:', error);
     return res.status(500).json({ error: 'Erro interno ao buscar propriedades.' });
   }
-}
+
+} 
+
+  export async function getPropertyAvailabilityHandler(req: Request, res: Response) {
+    const { id } = req.params;
+
+    try {
+      const property = await prisma.property.findUnique({
+        where: { id },
+      });
+
+      if (!property) {
+        return res.status(404).json({ error: 'Pripriedade não encontrada.' });
+      }
+
+      //Procura reservas ativas
+      const bookings = await prisma.booking.findMany({
+        where: {
+          propertyId: id,
+          status: {
+            in: ['PENDING', 'CONFIRMED'], 
+          },
+        },
+        select: {
+          id: true,
+          checkIn: true,
+          checkOut: true,
+        },
+        orderBy: {
+          checkIn: 'asc',
+        },
+      });
+
+      return res.status(200).json({
+        propertyId: id,
+        busyRanges: bookings.map((b) => ({
+          bookingId: b.id,
+          checkIn: b.checkIn,
+          checkOut: b.checkOut,
+        })),
+      });
+    } catch (error) {
+      console.error('Erro ao buscar disponibilidade', error);
+      return res.status(500).json({ error: 'Erro interno ao consultar disponibilidade.'});
+    }
+    
+  }

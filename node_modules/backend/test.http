@@ -46,3 +46,15 @@ Content-Type: application/json
   "startDate": "2026-10-01T00:00:00.000Z",
   "endDate": "2026-10-05T00:00:00.000Z"
 }
+
+
+### 6. Consultar Disponibilidade da Propriedade
+GET http://localhost:3333/properties/d0b2adb1-ecb3-478c-859f-8693643b2f39/availability
+
+
+### 7. Listar Reservas do Usuário
+GET http://localhost:3333/bookings/user/d569e2fb-1b13-4dcb-bc95-4a5f7dca1640
+
+
+### 8. Cancelar Reserva
+PATCH http://localhost:3333/bookings/4e26f53a-7e83-4aef-8920-57ebba50be6d/cancel
