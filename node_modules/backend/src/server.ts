@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { bookingRoutes } from './routes/booking.routes';
 import { userRoutes } from './routes/user.routes';
 import { propertyRoutes } from './routes/property.routes';
+import { authRoutes } from './routes/auth.routes';
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ const PORT = process.env.PORT || 3333;
 
 app.use(cors());
 app.use(express.json())
+app.use('/auth', authRoutes)
 
 //Rotas da API
 app.use('/bookings', bookingRoutes);
