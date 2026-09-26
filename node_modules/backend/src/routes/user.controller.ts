@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../lib/prisma';
+import bcrypt from 'bcryptjs';
 
 export async function createUserHandler(req: Request, res: Response) {
   try {
@@ -16,6 +17,16 @@ export async function createUserHandler(req: Request, res: Response) {
     if (existingUser) {
       return res.status(400).json({ error: 'E-mail já cadastrado.' });
     }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+  await prisma.user.create({
+    data: {
+      name,
+      email,
+      passwordHash,
+    },
+  });
 
     const user = await prisma.user.create({
       data: {
@@ -42,3 +53,4 @@ export async function getUsersHandler(req: Request, res: Response) {
     return res.status(500).json({ error: 'Erro interno ao buscar usuários.' });
   }
 }
+  
