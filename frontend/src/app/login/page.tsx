@@ -1,22 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
 const loginSchema = z.object({
   email: z.string().email('Introduza um e-mail válido'),
-  password: z.string().min(6, 'A palavra-passe deve ter no mínimo 6 caracteres'),
+  password: z.string().min(6, 'A palavra-passe deve ter pelo menos 6 caracteres'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
-  const { signIn } = useAuth();
+function LoginForm() {
   const [errorMessage, setErrorMessage] = useState('');
-  
+  const { signIn } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Obtém o destino após o login (ex: /properties/123) ou vai para a Home/Dashboard por defeito
+  const redirectUrl = searchParams.get('redirect') || '/';
+
   const {
     register,
     handleSubmit,
@@ -29,12 +35,13 @@ export default function LoginPage() {
     try {
       setErrorMessage('');
       await signIn(data);
+      router.push(redirectUrl);
     } catch (error: unknown) {
-        if (error instanceof Error) {
-            setErrorMessage(error.message);
-        } else {
-            setErrorMessage('Ocorreu um erro inesperado.');
-        }
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage('Ocorreu um erro inesperado ao efetuar o login.');
+      }
     }
   };
 
@@ -53,12 +60,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">E-mail</label>
+            <label className="block text-sm font-medium text-gray-700">
+              E-mail
+            </label>
             <input
               type="email"
               {...register('email')}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:outline-none"
-              placeholder="seu@email.com"
+              className="mt-1 w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none"
+              placeholder="o.seu@email.com"
             />
             {errors.email && (
               <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
@@ -66,11 +75,13 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Palavra-passe</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Palavra-passe
+            </label>
             <input
               type="password"
               {...register('password')}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-blue-500 focus:outline-none"
+              className="mt-1 w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none"
               placeholder="••••••••"
             />
             {errors.password && (
@@ -81,12 +92,20 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-blue-600 py-2 px-4 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+            className="w-full rounded-md bg-blue-600 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
           >
             {isSubmitting ? 'A entrar...' : 'Entrar'}
           </button>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">A carregar...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -84,3 +84,24 @@ export async function getPropertiesHandler(req: Request, res: Response) {
     }
     
   }
+
+  export async function getPropertyByIdHandler(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      //Busca imovel pelo ID utilizando o Prisma
+      const property = await prisma.property.findUnique({
+        where: { id },
+      });
+
+      if (!property) {
+        return res.status(404).json({ message: 'Imovel não encotrado.' });
+      }
+
+      return res.json(property);
+    } catch (error) {
+      console.error('Erro ao buscar imóvel por ID:', error);
+      return res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+    
+  }
