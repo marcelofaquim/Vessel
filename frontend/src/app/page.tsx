@@ -125,62 +125,78 @@ export const MOCK_PROPERTIES: Property[] = [
   }
 ];
 
-function PropertyCard({ property, onBook }: { property: Property; onBook: (id: string) => void }) {
-  const router = useRouter();
+interface PropertyCardProps {
+  property: Property;
+  onBook: (propertyId: string) => void;
+}
+
+function PropertyCard({ property, onBook }: PropertyCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const nextImage = (e: React.MouseEvent) => {
+  const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentImageIndex((prev) => (prev + 1) % property.images.length);
+    if (property.images && property.images.length > 0) {
+      setCurrentImageIndex((prevIndex) =>
+        prevIndex === 0 ? property.images.length - 1 : prevIndex - 1
+      );
+    }
   };
 
-  const prevImage = (e: React.MouseEvent) => {
+  const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setCurrentImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length);
+    if (property.images && property.images.length > 0) {
+      setCurrentImageIndex((prevIndex) =>
+        prevIndex === property.images.length - 1 ? 0 : prevIndex + 1
+      );
+    }
+  };
+
+  const handleCardClick = () => {
+    onBook(property.id);
   };
 
   return (
     <div className="group flex flex-col justify-between overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-100 transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-      <div
-        onClick={() => router.push(`/properties/${property.id}`)}
-        className="cursor-pointer"
-      >
+      <div onClick={handleCardClick} className="cursor-pointer">
         <div className="relative h-56 w-full overflow-hidden bg-gray-200">
           <img
-            src={property.images[currentImageIndex]}
+            src={
+              property.images?.[currentImageIndex] ||
+              'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=80'
+            }
             alt={property.title}
             className="h-full w-full object-cover transition duration-300"
           />
 
-          <div className="absolute top-3 right-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-bold text-gray-900 backdrop-blur-sm shadow-sm flex items-center gap-1">
-            ★ {property.rating}
-          </div>
+          {property.rating && (
+            <div className="absolute top-3 right-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-bold text-gray-900 backdrop-blur-sm shadow-sm flex items-center gap-1">
+              ★ {property.rating}
+            </div>
+          )}
 
-          {/* Botões de navegação por setas exibidos no hover */}
-          {property.images.length > 1 && (
+          {property.images && property.images.length > 1 && (
             <>
               <button
                 type="button"
-                onClick={prevImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 text-gray-800 shadow hover:bg-white opacity-0 group-hover:opacity-100 transition"
+                onClick={handlePrevImage}
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 text-gray-800 shadow hover:bg-white opacity-0 group-hover:opacity-100 transition z-10"
               >
                 ‹
               </button>
               <button
                 type="button"
-                onClick={nextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 text-gray-800 shadow hover:bg-white opacity-0 group-hover:opacity-100 transition"
+                onClick={handleNextImage}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-1.5 text-gray-800 shadow hover:bg-white opacity-0 group-hover:opacity-100 transition z-10"
               >
                 ›
               </button>
 
-              {/* Indicadores de bolinhas */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
                 {property.images.map((_, idx) => (
                   <span
                     key={idx}
-                    className={`h-1.5 w-1.5 rounded-full transition-all ${
-                      idx === currentImageIndex ? 'bg-white w-3' : 'bg-white/50'
+                    className={`h-1.5 rounded-full transition-all ${
+                      idx === currentImageIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'
                     }`}
                   />
                 ))}
@@ -195,7 +211,7 @@ function PropertyCard({ property, onBook }: { property: Property; onBook: (id: s
           </h3>
           <p className="text-xs font-medium text-gray-500 mt-1">{property.location}</p>
           <p className="mt-2 text-xs text-gray-400">
-            {property.maxGuests} hóspedes • {property.bedrooms} quartos
+            {property.maxGuests || 2} hóspedes • {property.bedrooms || 1} quartos
           </p>
         </div>
       </div>
@@ -203,14 +219,14 @@ function PropertyCard({ property, onBook }: { property: Property; onBook: (id: s
       <div className="p-4 pt-2 border-t border-gray-50 flex items-center justify-between">
         <div>
           <span className="text-lg font-black text-gray-900">
-            R$ {property.pricePerNight}
+            R$ {Number(property.pricePerNight).toFixed(2)}
           </span>
           <span className="text-xs text-gray-500"> / noite</span>
         </div>
 
         <button
           type="button"
-          onClick={() => onBook(property.id)}
+          onClick={handleCardClick}
           className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition active:scale-95"
         >
           Reservar
@@ -223,43 +239,34 @@ function PropertyCard({ property, onBook }: { property: Property; onBook: (id: s
 export default function HomePage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const { isAuthenticated, user, signOut } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-  async function loadProperties() {
-    try {
-      const response = await api.get('/properties');
-      const apiData = response.data;
 
-      if (Array.isArray(apiData) && apiData.length > 0) {
-        // Mapeia os dados do banco e complementa com as acomodações extras do MOCK
-        const updatedMock = MOCK_PROPERTIES.map((mockItem, index) => {
-          if (apiData[index]) {
-            return {
-              ...mockItem,
-              id: apiData[index].id || mockItem.id,
-              title: apiData[index].title || mockItem.title,
-              pricePerNight: apiData[index].pricePerNight || mockItem.pricePerNight,
-              location: apiData[index].location || mockItem.location,
-            };
-          }
-          return mockItem;
-        });
+    Promise.resolve().then(() => setMounted(true));
+    
+    async function loadProperties() {
+      try {
+        const response = await api.get('/properties');
+        const apiData = response.data;
 
-        setProperties(updatedMock);
-      } else {
+        if (Array.isArray(apiData) && apiData.length > 0) {
+          setProperties(apiData);
+        } else {
+          setProperties(MOCK_PROPERTIES);
+        }
+      } catch (error) {
+        // console.error('Erro ao buscar propriedades da API, utilizando mock:', error);
         setProperties(MOCK_PROPERTIES);
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setProperties(MOCK_PROPERTIES);
-    } finally {
-      setLoading(false);
     }
-  }
 
-  loadProperties();
-}, []);
+    loadProperties();
+  }, []);
 
   const handleBook = (propertyId: string) => {
     if (!isAuthenticated) {
@@ -273,17 +280,21 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="sticky top-0 z-50 border-b bg-white px-8 py-4 shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div 
-            onClick={() => router.push('/')} 
+          <div
+            onClick={() => router.push('/')}
             className="flex cursor-pointer items-center gap-2 text-2xl font-black tracking-tight text-blue-600"
           >
             <span>⛵</span> Vessel
           </div>
 
-          <div>
-            {isAuthenticated ? (
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-gray-700">Olá, {user?.name}</span>
+          <div className="flex items-center gap-4">
+            {!mounted ? (
+              <div className="h-9 w-28" />
+            ) : isAuthenticated ? (
+              <>
+                <span className="text-sm font-medium text-gray-700">
+                  Olá, {user?.name || 'Utilizador'}
+                </span>
                 <button
                   onClick={() => router.push('/dashboard')}
                   className="rounded-full border border-gray-300 px-4 py-1.5 text-sm font-semibold hover:bg-gray-100 transition"
@@ -296,7 +307,7 @@ export default function HomePage() {
                 >
                   Sair
                 </button>
-              </div>
+              </>
             ) : (
               <button
                 onClick={() => router.push('/login')}
