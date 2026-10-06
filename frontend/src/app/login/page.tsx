@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email('Introduza um e-mail válido'),
@@ -96,6 +97,16 @@ function LoginForm() {
           >
             {isSubmitting ? 'A entrar...' : 'Entrar'}
           </button>
+
+          <div className='mt-6 text-center text-sm text-gray-600'>
+            Ainda não tem conta?{' '}
+            <Link
+              href="/register"
+              className='font-bold text-blue-600 hover:underline'
+            >
+              Registre-se  
+             </Link>  
+          </div>
         </form>
       </div>
     </div>

@@ -132,6 +132,8 @@ interface PropertyCardProps {
 
 function PropertyCard({ property, onBook }: PropertyCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const router = useRouter();
+
 
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -152,7 +154,7 @@ function PropertyCard({ property, onBook }: PropertyCardProps) {
   };
 
   const handleCardClick = () => {
-    onBook(property.id);
+    router.push(`/properties/${property.id}`);
   };
 
   return (
@@ -226,7 +228,10 @@ function PropertyCard({ property, onBook }: PropertyCardProps) {
 
         <button
           type="button"
-          onClick={handleCardClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            onBook(property.id)
+          }}
           className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition active:scale-95"
         >
           Reservar

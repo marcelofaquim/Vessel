@@ -65,7 +65,7 @@ export default function DashboardPage() {
     async function loadBookings() {
       // 1. Tenta carregar do localStorage do navegador primeiro
       const savedBookings = localStorage.getItem('vessel_user_bookings');
-      if (savedBookings) {
+      if (savedBookings !== null) {
         try {
           setBookings(JSON.parse(savedBookings));
           setLoading(false);
@@ -116,7 +116,7 @@ export default function DashboardPage() {
     // Atualiza o estado local e persiste a alteração no localStorage
     setBookings((prevBookings) => {
       const updated = prevBookings.filter((b) =>
-        b.id === bookingId); 
+        b.id !== bookingId); 
       localStorage.setItem('vessel_user_bookings', JSON.stringify(updated))
       return updated;
     });
